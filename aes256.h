@@ -1,20 +1,26 @@
 #ifndef AES256_H
 #define AES256_H
 
-// FIPS 197 has specification for AES-256
-// https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf
+/*
+NIST FIPS 197 has AES specification
+https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf
+
+AES-Type		128		192		256
+NB				4		4		4
+NK				4		6		8
+NR				10		12		14
+KEY_SCH_WORDS	44		52		60
+*/
 
 // DEFINES
 #define NB				4  // # of 32-bit words per block
 #define NK				8  // # of 32-bit words per key
 #define NR				14 // # of rounds
-#define BLOCK_BYTES 	16 // NB * 4 bytes = 16 bytes -> 128 bits
-#define KEY_BYTES		32 // NK * 4 bytes = 32 bytes -> 256 bits
-#define KEY_SCH_WORDS	60 // 4 * (NR + 1) = 60 words
+#define KEY_SCH_WORDS	60 // 4 * (NR + 1)
 
 // TYPEDEFS
-typedef unsigned char Block[BLOCK_BYTES];
-typedef unsigned char Key[KEY_BYTES];
+typedef unsigned int Block[NB];
+typedef unsigned int Key[NK];
 
 // LOOKUP TABLES
 unsigned char lt_subbytes[256] = {
@@ -36,7 +42,24 @@ unsigned char lt_subbytes[256] = {
 '\x8c','\xa1','\x89','\x0d','\xbf','\xe6','\x42','\x68','\x41','\x99','\x2d','\x0f','\xb0','\x54','\xbb','\x16'
 };
 
-unsigned char lt_invsubbytes[256];
+unsigned char lt_invsubbytes[256] = {
+'\x52','\x09','\x6a','\xd5','\x30','\x36','\xa5','\x38','\xbf','\x40','\xa3','\x9e','\x81','\xf3','\xd7','\xfb',
+'\x7c','\xe3','\x39','\x82','\x9b','\x2f','\xff','\x87','\x34','\x8e','\x43','\x44','\xc4','\xde','\xe9','\xcb',
+'\x54','\x7b','\x94','\x32','\xa6','\xc2','\x23','\x3d','\xee','\x4c','\x95','\x0b','\x42','\xfa','\xc3','\x4e',
+'\x08','\x2e','\xa1','\x66','\x28','\xd9','\x24','\xb2','\x76','\x5b','\xa2','\x49','\x6d','\x8b','\xd1','\x25',
+'\x72','\xf8','\xf6','\x64','\x86','\x68','\x98','\x16','\xd4','\xa4','\x5c','\xcc','\x5d','\x65','\xb6','\x92',
+'\x6c','\x70','\x48','\x50','\xfd','\xed','\xb9','\xda','\x5e','\x15','\x46','\x57','\xa7','\x8d','\x9d','\x84',
+'\x90','\xd8','\xab','\x00','\x8c','\xbc','\xd3','\x0a','\xf7','\xe4','\x58','\x05','\xb8','\xb3','\x45','\x06',
+'\xd0','\x2c','\x1e','\x8f','\xca','\x3f','\x0f','\x02','\xc1','\xaf','\xbd','\x03','\x01','\x13','\x8a','\x6b',
+'\x3a','\x91','\x11','\x41','\x4f','\x67','\xdc','\xea','\x97','\xf2','\xcf','\xce','\xf0','\xb4','\xe6','\x73',
+'\x96','\xac','\x74','\x22','\xe7','\xad','\x35','\x85','\xe2','\xf9','\x37','\xe8','\x1c','\x75','\xdf','\x6e',
+'\x47','\xf1','\x1a','\x71','\x1d','\x29','\xc5','\x89','\x6f','\xb7','\x62','\x0e','\xaa','\x18','\xbe','\x1b',
+'\xfc','\x56','\x3e','\x4b','\xc6','\xd2','\x79','\x20','\x9a','\xdb','\xc0','\xfe','\x78','\xcd','\x5a','\xf4',
+'\x1f','\xdd','\xa8','\x33','\x88','\x07','\xc7','\x31','\xb1','\x12','\x10','\x59','\x27','\x80','\xec','\x5f',
+'\x60','\x51','\x7f','\xa9','\x19','\xb5','\x4a','\x0d','\x2d','\xe5','\x7a','\x9f','\x93','\xc9','\x9c','\xef',
+'\xa0','\xe0','\x3b','\x4d','\xae','\x2a','\xf5','\xb0','\xc8','\xeb','\xbb','\x3c','\x83','\x53','\x99','\x61',
+'\x17','\x2b','\x04','\x7e','\xba','\x77','\xd6','\x26','\xe1','\x69','\x14','\x63','\x55','\x21','\x0c','\x7d'
+};
 
 unsigned int Rcon[10] = {
 0x01000000,
@@ -61,12 +84,17 @@ void printBytes(Block state);
 unsigned int subWord(unsigned int word);
 unsigned int rotWord(unsigned int word);
 
-void subBytes(Block state);
-void shiftRows(Block state);
-void mixColumns(Block state);
-//void addRoundKey(Block state);
 void keyExpansion(Key userKey);
-//void cipher(Block state, int nr, 
+
+void subBytes(Block state);
+void invSubBytes(Block state);
+void shiftRows(Block state);
+void invShiftRows(Block state);
+void mixColumns(Block state);
+void invMixColumns(Block state);
+void addRoundKey(Block state, unsigned int round);
+void cipher(Block state);
+//void invCipher(Block state);
 
 // INCLUDES
 #include <stdio.h>
