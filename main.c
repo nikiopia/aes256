@@ -1,27 +1,32 @@
-#include "aes256.h"
+#include "libaes.h"
 
 int main(int argc, char** argv) {
-	Key myKey = {
-		0x603DEB10,
-		0x15CA71BE,
-		0x2B73AEF0,
-		0x857D7781,
-		0x1F352C07,
-		0x3B6108D7,
-		0x2D9810A3,
-		0x0914DFF4
-	};
-	Block info = {
-		0x6BC1BEE2,
-		0x2E409F96,
-		0xE93D7E11,
-		0x7393172A
-	};
-	
-	keyExpansion(myKey);
-	printBytes(info);
-	cipher(info);
-	invCipher(info);
-	
+	Key myKey;
+
+	if (argc == 4) {
+		if (argv[1][0] == 'e') {
+			printf("libAES: Checking key...\n");
+			printf("key input=%s\n",argv[3]);
+			if (importKey(argv[3], myKey) < 0) {
+				printf("libAES: Key error, length or composition\n");
+				printKey(myKey);
+				return 0;
+			}
+			printf("libAES: Beginning encryption on '%s'\n",argv[2]);
+			fileInterface(argv[2], myKey, 0);
+			printf("Done.\n");
+		} else if (argv[1][0] == 'd') {
+			printf("libAES: Checking key...\n");
+			if (importKey(argv[3], myKey) < 0) {
+				printf("libAES: Key error, length or composition\n");
+				printKey(myKey);
+				return 0;
+			}
+			printf("libAES: Beginning decryption on '%s'\n",argv[2]);
+			fileInterface(argv[2], myKey, 1);
+			printf("Done.\n");
+		}
+	}
+
 	return 0;
 }
