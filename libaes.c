@@ -1,18 +1,29 @@
+#ifndef LIBAES_C
+#define LIBAES_C
+
 #include "libaes.h"
 
-unsigned char mult_gf256(unsigned char A, unsigned char B) {
+// PURGES MEMORY
+void mult_gf256(unsigned char A, unsigned char B, unsigned char* res) {
 	//XTimes(b) = (b << 1) ^ ((0x1B) * (b >= 0x80));
-	unsigned char cur_xtimes = A;		// this value needs updating for each cycle
-	unsigned char result = A * (B & 1); // if LSB(B)=1 -> result=A, else result=0 (initially)
-	unsigned char bitQueue = B >> 1; 	// holds all of the bits left to process
+	unsigned char cur_xtimes = A;		// This value must be updated each cycle
+	// If LSB(B)=1 -> result=A, else result=0 (initially)
+	unsigned char result = A * (B & 1);
+	unsigned char bitQueue = B >> 1; 	// Holds bits left to process
 	while (bitQueue > 0) {
-		cur_xtimes = (unsigned char)(cur_xtimes << 1) ^ (0x1B * (cur_xtimes >= 0x80));
+		cur_xtimes = (unsigned char)(cur_xtimes << 1) ^ 
+			(0x1B * (cur_xtimes >= 0x80));
 		result = result ^ (cur_xtimes * (bitQueue & 1));
 		bitQueue = bitQueue >> 1;
 	}
-	return result;
+	
+	// Set output value
+	*res = result;
+	// Data purge
+	cur_xtimes = 0; bitQueue = 0; result = 0;
 }
 
+// PURGES MEMORY
 void printBytes(Block state) {
 	unsigned char A;
 	unsigned char B;
@@ -26,8 +37,12 @@ void printBytes(Block state) {
 		printf("%02X %02X %02X %02X\n",A,B,C,D);
 	}
 	printf("\n");
+	
+	// Data purge
+	A = 0; B = 0; C = 0; D = 0;
 }
 
+// NO MEMORY
 void subBytes(Block state) {
 	unsigned char* wordAddr;
 	for (unsigned int i = 0; i < NB; ++i) {
@@ -40,6 +55,7 @@ void subBytes(Block state) {
 	}
 }
 
+// NO MEMORY
 void invSubBytes(Block state) {
 	unsigned char* wordAddr;
 	for (unsigned int i = 0; i < NB; ++i) {
@@ -51,6 +67,7 @@ void invSubBytes(Block state) {
 	}
 }
 
+// PURGES MEMORY
 void shiftRows(Block state) {
 	unsigned char A;
 	unsigned char B;
@@ -81,8 +98,12 @@ void shiftRows(Block state) {
 	*word2 = A;
 	*word3 = B;
 	*word4 = C;
+	
+	// Data purge
+	A = 0; B = 0; C = 0;
 }
 
+// PURGES MEMORY
 void invShiftRows(Block state) {
 	unsigned char A;
 	unsigned char B;
@@ -113,11 +134,15 @@ void invShiftRows(Block state) {
 	*word3 = A;
 	*word2 = B;
 	*word1 = C;
+	
+	// Data purge
+	A = 0; B = 0; C = 0;
 }
 
+// PURGES MEMORY
 void mixColumns(Block state) {
-	unsigned char A;
-	unsigned char B;
+	unsigned char A; unsigned char temp1;
+	unsigned char B; unsigned char temp2;
 	unsigned char C;
 	unsigned char D;
 	unsigned char* word;
@@ -129,21 +154,34 @@ void mixColumns(Block state) {
 		C = *(word + 1);
 		D = *word;
 		// First new value
-		*(word + 3) = mult_gf256(2, A) ^ mult_gf256(3, B) ^ C ^ D;
+		mult_gf256(2, A, &temp1);
+		mult_gf256(3, B, &temp2);
+		*(word + 3) = temp1 ^ temp2 ^ C ^ D;
 		// Second new
-		*(word + 2) = A ^ mult_gf256(2, B) ^ mult_gf256(3, C) ^ D;
+		mult_gf256(2, B, &temp1);
+		mult_gf256(3, C, &temp2);
+		*(word + 2) = A ^ temp1 ^ temp2 ^ D;
 		// Third new
-		*(word + 1) = A ^ B ^ mult_gf256(2, C) ^ mult_gf256(3, D);
+		mult_gf256(2, C, &temp1);
+		mult_gf256(3, D, &temp2);
+		*(word + 1) = A ^ B ^ temp1 ^ temp2;
 		// Fourth new
-		*word = mult_gf256(3, A) ^ B ^ C ^ mult_gf256(2, D);
+		mult_gf256(3, A, &temp1);
+		mult_gf256(2, D, &temp2);
+		*word = temp1 ^ B ^ C ^ temp2;
 	}
+
+	// Data purge
+	A = 0; B = 0; C = 0; D = 0;
+	temp1 = 0; temp2 = 0;
 }
 
+// PURGES MEMORY
 void invMixColumns(Block state) {
-	unsigned char A;
-	unsigned char B;
-	unsigned char C;
-	unsigned char D;
+	unsigned char A; unsigned char temp1;
+	unsigned char B; unsigned char temp2;
+	unsigned char C; unsigned char temp3;
+	unsigned char D; unsigned char temp4;
 	unsigned char* word;
 	for (unsigned int i = 0; i < NB; ++i) {
 		word = (unsigned char*)(&state[i]);
@@ -152,33 +190,55 @@ void invMixColumns(Block state) {
 		C = *(word + 1);
 		D = *word;
 		// First new value
-		*(word + 3) = mult_gf256(0xE, A) ^ mult_gf256(0xB, B) ^ 
-			mult_gf256(0xD, C) ^ mult_gf256(0x9, D);
+		mult_gf256(0xE, A, &temp1);
+		mult_gf256(0xB, B, &temp2);
+		mult_gf256(0xD, C, &temp3);
+		mult_gf256(0x9, D, &temp4);
+		*(word + 3) = temp1 ^ temp2 ^ temp3 ^ temp4;
 		// Second new value
-		*(word + 2) = mult_gf256(0x9, A) ^ mult_gf256(0xE, B) ^
-			mult_gf256(0xB, C) ^ mult_gf256(0xD, D);
+		mult_gf256(0x9, A, &temp1);
+		mult_gf256(0xE, B, &temp2);
+		mult_gf256(0xB, C, &temp3);
+		mult_gf256(0xD, D, &temp4);
+		*(word + 2) = temp1 ^ temp2 ^ temp3 ^ temp4;
 		// Third new value
-		*(word + 1) = mult_gf256(0xD, A) ^ mult_gf256(0x9, B) ^
-			mult_gf256(0xE, C) ^ mult_gf256(0xB, D);
+		mult_gf256(0xD, A, &temp1);
+		mult_gf256(0x9, B, &temp2);
+		mult_gf256(0xE, C, &temp3);
+		mult_gf256(0xB, D, &temp4);
+		*(word + 1) = temp1 ^ temp2 ^ temp3 ^ temp4;
 		// Fourth new value
-		*word = mult_gf256(0xB, A) ^ mult_gf256(0xD, B) ^
-			mult_gf256(0x9, C) ^ mult_gf256(0xE, D);
+		mult_gf256(0xB, A, &temp1);
+		mult_gf256(0xD, B, &temp2);
+		mult_gf256(0x9, C, &temp3);
+		mult_gf256(0xE, D, &temp4);
+		*word = temp1 ^ temp2 ^ temp3 ^ temp4;
 	}
+
+	// Data purge
+	A = 0; B = 0; C = 0; D = 0;
+	temp1 = 0; temp2 = 0; temp3 = 0; temp4 = 0;
 }
 
-unsigned int subWord(unsigned int word) {
+// PURGES MEMORY
+void subWord(unsigned int word, unsigned int* res) {
 	unsigned int returnVal;
 	unsigned char tempC;
 	// i=0 is for LS byte
 	// i=3 is for MS byte
 	for (unsigned int i = 0; i < NB; ++i) {
-		tempC = *((unsigned char*)(&word) + i); // get the current byte
-		*((unsigned char*)(&returnVal) + i) = lt_subbytes[tempC]; // update it
+		tempC = *((unsigned char*)(&word) + i); // Get the current byte
+		*((unsigned char*)(&returnVal) + i) = lt_subbytes[tempC]; // Update it
 	}
-	return returnVal;
+	
+	// Set output value
+	*res = returnVal;
+	// Data purge
+	tempC = 0; returnVal = 0;
 }
 
-unsigned int rotWord(unsigned int word) {
+// PURGES MEMORY
+void rotWord(unsigned int word, unsigned int* res) {
 	unsigned int returnVal;
 	// Calculate base addresses once since they're used a lot
 	unsigned char* returnAddr = (unsigned char*)(&returnVal);
@@ -189,9 +249,14 @@ unsigned int rotWord(unsigned int word) {
 	*(returnAddr + 2) = *(wordAddr + 1);
 	*(returnAddr + 1) = *wordAddr;
 	*returnAddr = tempC;
-	return returnVal;
+
+	// Set output value
+	*res = returnVal;
+	// Data purge
+	tempC = 0; returnVal = 0;
 }
 
+// PURGES MEMORY
 void keyExpansion(Key userKey) {
 	unsigned int i = 0;
 	unsigned int tempWord;
@@ -202,21 +267,30 @@ void keyExpansion(Key userKey) {
 	while (i <= (NB * NR + 3)) {
 		tempWord = KeySchedule[i-1];
 		if (i % NK == 0) {
-			tempWord = subWord(rotWord(tempWord)) ^ Rcon[i/NK - 1];
+			rotWord(tempWord, &tempWord);
+			subWord(tempWord, &tempWord);
+			tempWord = tempWord ^ Rcon[i/NK - 1];
+			//tempWord = subWord(rotWord(tempWord)) ^ Rcon[i/NK - 1];
 		} else if (NK > 6 && i % NK == 4) {
-			tempWord = subWord(tempWord);
+			subWord(tempWord, &tempWord);
+			//tempWord = subWord(tempWord);
 		}
 		KeySchedule[i] = KeySchedule[i-NK] ^ tempWord;
 		i++;
 	}
+	
+	// Data purge
+	i = 0; tempWord = 0;
 }
 
+// NO MEMORY
 void addRoundKey(Block state, unsigned int round) {
 	for (unsigned int i = 0; i < NB; ++i) {
 		state[i] = state[i] ^ KeySchedule[NB*round + i];
 	}
 }
 
+// NO MEMORY
 void cipher(Block state) {
 	addRoundKey(state, 0);
 	for (unsigned int round = 1; round < NR; ++round) {
@@ -230,6 +304,7 @@ void cipher(Block state) {
 	addRoundKey(state, NR);
 }
 
+// NO MEMORY
 void invCipher(Block state) {
 	addRoundKey(state, NR);
 	for (unsigned int round = NR - 1; round >= 1; --round) {
@@ -244,6 +319,7 @@ void invCipher(Block state) {
 }
 
 // MAIN FUNCTIONS
+// PURGES MEMORY
 void fileInterface(char filename[], Key userKey, unsigned int mode) {
 	if (mode != 0 && mode != 1) { return; }
 
@@ -258,24 +334,21 @@ void fileInterface(char filename[], Key userKey, unsigned int mode) {
 	} else {
 		// "Removes" .aes
 		char temp[FILENAME_SIZE];
-		sprintf(temp, "%s", filename); // Need to make a local copy to be able to edit
-		char *needleStart = strstr(temp, ".aes"); // The sole reason for importing string.h
+		sprintf(temp, "%s", filename); // Make a local copy to be able to edit
+		char *needleStart = strstr(temp, ".aes"); // Including string.h for this
 		if (!needleStart) {
-			printf("libAES: No .aes extension (%s), was this file encryped?\n", filename);
+			printf("libAES: No .aes extension (%s), was this file encryped?\n",
+				filename);
 			return;
 		}
 		*needleStart = 0;
-		sprintf(outFilename, "%s", temp); // Move the local copy to output name string
+		sprintf(outFilename, "%s", temp); // Move local copy to output name var
 	}
 
 	FILE* inputFile = fopen(inFilename, "rb");
 	FILE* outputFile = fopen(outFilename, "wb");
 	if (!inputFile) {
 		printf("libAES: Error opening file '%s'\n",inFilename);
-		return;
-	}
-	if (!outputFile) {
-		printf("libAES: Error opening file '%s'\n",outFilename);
 		return;
 	}
 
@@ -290,7 +363,7 @@ void fileInterface(char filename[], Key userKey, unsigned int mode) {
 	}
 
 	unsigned char buf[FILEBUF_SIZE];	// I/O buffer
-	int byteCount = 0;					// How many bytes have been read for the current block
+	int byteCount = 0;					// How many bytes in block so far
 	unsigned char currentByte;
 	unsigned int tempWord;				// Temporary word for building a block
 	unsigned char* baseAddr;			// The base address of the current word
@@ -357,21 +430,40 @@ void fileInterface(char filename[], Key userKey, unsigned int mode) {
 			fputc(*baseAddr, outputFile);
 		}
 	}
-
+	
+	// Close files
 	fclose(inputFile);
 	fclose(outputFile);
+	// Purge all data
+	for (unsigned int i = 0; i < FILEBUF_SIZE; ++i) { buf[i] = 0; } // Buffer
+	for (unsigned int i = 0; i < NB; ++i) { data[i] = 0; } // Data block
+	// Key schedule
+	for (unsigned int i = 0; i < KEY_SCH_WORDS; ++i) { KeySchedule[i] = 0; }
+	tempWord = 0; currentByte = 0; byteCount = 0; // Misc variables
+	resetKey(userKey); // Never leave key in memory
 }
 
-void printKey(Key theKey) {
+void printKey(Key userKey) {
+	printf("libAES: Key contents:\n");
 	for (unsigned int i = 0; i < NK; ++i) {
-		printf("%08X\n",theKey[i]);
+		printf("%08X\n",userKey[i]);
 	}
 }
 
+void resetKey(Key userKey) {
+	for (unsigned int i = 0; i < NK; ++i) {
+		userKey[i] = 0;
+	}
+}
+
+// PURGES MEMORY
 int importKey(char keyAsText[], Key userKey) {
 	// Check key length and composition
 	unsigned int keyLen = (unsigned int)(strlen(keyAsText));
-	if (keyLen != 64) { return -1; }
+	if (keyLen != 64) {
+		resetKey(userKey);
+		return -1;
+	}
 
 	unsigned int tempWord;
 	char temp;
@@ -389,10 +481,18 @@ int importKey(char keyAsText[], Key userKey) {
 				// a-f
 				tempWord = (tempWord << 4) + (temp - 87);
 			} else {
+				// Key processing failed, purge key from memory
+				resetKey(userKey);
 				return -1;
 			}
 		}
 		userKey[w] = tempWord;
 	}
+	
+	// Data purge
+	tempWord = 0; temp = 0; keyLen = 0;
+	
 	return 0;
 }
+
+#endif
