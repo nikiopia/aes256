@@ -5,6 +5,7 @@
 
 // PURGES MEMORY
 void mult_gf256(unsigned char A, unsigned char B, unsigned char* res) {
+	/*
 	//XTimes(b) = (b << 1) ^ ((0x1B) * (b >= 0x80));
 	unsigned char cur_xtimes = A;		// This value must be updated each cycle
 	// If LSB(B)=1 -> result=A, else result=0 (initially)
@@ -21,6 +22,32 @@ void mult_gf256(unsigned char A, unsigned char B, unsigned char* res) {
 	*res = result;
 	// Data purge
 	cur_xtimes = 0; bitQueue = 0; result = 0;
+	*/
+	unsigned char temp;
+	switch(A) {
+		case 2:
+			temp = 0;
+			break;
+		case 3:
+			temp = 1;
+			break;
+		case 9:
+			temp = 2;
+			break;
+		case 0xB:
+			temp = 3;
+			break;
+		case 0xD:
+			temp = 4;
+			break;
+		case 0xE:
+			temp = 5;
+			break;
+	}
+	// Return value
+	*res = lt_gf256[temp][B];
+	// Data purge
+	temp = 0;
 }
 
 // PURGES MEMORY
