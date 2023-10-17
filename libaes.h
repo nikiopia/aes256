@@ -2,30 +2,43 @@
 #define LIBAES_H
 
 /*
+      _/    _/           _/_/_/   _/_/_/_/_/   _/_/_/_/
+     _/ _/ _/         _/      _/ _/         _/
+    _/    _/         _/      _/ _/         _/
+   _/ _/ _/_/_/_/   _/_/_/_/_/ _/_/_/       _/_/_/
+  _/ _/ _/      _/ _/      _/ _/                 _/
+ _/ _/ _/      _/ _/      _/ _/                 _/
+_/ _/ _/_/_/_/   _/      _/ _/_/_/_/_/ _/_/_/_/
+
 NIST FIPS 197 has AES specification
 https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197-upd1.pdf
 
-AES-Type		128		192		256
-NB				4		4		4
-NK				4		6		8
-NR				10		12		14
-KEY_SCH_WORDS	44		52		60
+AES-Type      | 128   | 192   | 256   | Meaning
+--------------+-------+-------+-------+-------------------------
+NB            | 4     | 4     | 4     | 32-bit words per block
+NK            | 4     | 6     | 8     | 32-bit words per key
+NR            | 10    | 12    | 14    | Number of cipher rounds
+KEY_SCH_WORDS | 44    | 52    | 60    | ... = 4 * (NR + 1)
 */
 
 // DEFINES
-#define NB				4	// # of 32-bit words per block
-#define NK				8	// # of 32-bit words per key
-#define NR				14	// # of rounds
-#define KEY_SCH_WORDS	60	// 4 * (NR + 1)
-#define FILEBUF_SIZE	17	// 16 bytes per block + null byte
+// AES PARAMS
+#define NB				4
+#define NK				8
+#define NR				14
+#define KEY_SCH_WORDS	60
+// FILE I/O PARAMS
+#define DATABUF_SIZE	17	// 16 bytes per block + null byte
 #define FILENAME_SIZE	100	// Max filename size
 
 // TYPEDEFS
-typedef unsigned int Block[NB];
-typedef unsigned int Key[NK];
+typedef unsigned char uint8;
+typedef unsigned long int uint32;
+typedef uint32 Block[NB];
+typedef uint32 Key[NK];
 
 // LOOKUP TABLES FOR "subBytes()" AND "invSubBytes()"
-unsigned char lt_subbytes[256] = {
+uint8 lt_subbytes[256] = {
 '\x63','\x7c','\x77','\x7b','\xf2','\x6b','\x6f','\xc5','\x30','\x01','\x67',
 '\x2b','\xfe','\xd7','\xab','\x76','\xca','\x82','\xc9','\x7d','\xfa','\x59',
 '\x47','\xf0','\xad','\xd4','\xa2','\xaf','\x9c','\xa4','\x72','\xc0','\xb7',
@@ -52,7 +65,7 @@ unsigned char lt_subbytes[256] = {
 '\x54','\xbb','\x16'
 };
 
-unsigned char lt_invsubbytes[256] = {
+uint8 lt_invsubbytes[256] = {
 '\x52','\x09','\x6a','\xd5','\x30','\x36','\xa5','\x38','\xbf','\x40','\xa3',
 '\x9e','\x81','\xf3','\xd7','\xfb','\x7c','\xe3','\x39','\x82','\x9b','\x2f',
 '\xff','\x87','\x34','\x8e','\x43','\x44','\xc4','\xde','\xe9','\xcb','\x54',
@@ -79,8 +92,8 @@ unsigned char lt_invsubbytes[256] = {
 '\x21','\x0c','\x7d'
 };
 
-// LOOKUP TABLES FOR "mult_gf256()"
-unsigned char lt_gf256[6][256] = {{
+// LOOKUP TABLES FOR "mult_gf256()" FOR A = {2,3,9,B,D,E}
+uint8 lt_gf256[6][256] = {{
 '\x00','\x02','\x04','\x06','\x08','\x0a','\x0c','\x0e','\x10','\x12','\x14',
 '\x16','\x18','\x1a','\x1c','\x1e','\x20','\x22','\x24','\x26','\x28','\x2a',
 '\x2c','\x2e','\x30','\x32','\x34','\x36','\x38','\x3a','\x3c','\x3e','\x40',
@@ -238,7 +251,7 @@ unsigned char lt_gf256[6][256] = {{
 }};
 
 // ROUND CONSTANTS FOR AES
-unsigned int Rcon[10] = {
+uint32 Rcon[10] = {
 0x01000000,
 0x02000000,
 0x04000000,
@@ -252,16 +265,17 @@ unsigned int Rcon[10] = {
 };
 
 // KEY SCHEDULE
-unsigned int KeySchedule[KEY_SCH_WORDS];
+uint32 KeySchedule[KEY_SCH_WORDS];
 
 // HELPER FUNCTIONS
 void printBytes(Block state);
 void printKey(Key userKey);
+void findExtension(char str[FILENAME_SIZE], char** addr);
 
 // AES HELPER FUNCTIONS
-void mult_gf256(unsigned char A, unsigned char B, unsigned char* res);
-void subWord(unsigned int word, unsigned int* res);
-void rotWord(unsigned int word, unsigned int* res);
+void mult_gf256(uint8 A, uint8 B, uint8* res);
+void subWord(uint32 word, uint32* res);
+void rotWord(uint32 word, uint32* res);
 
 // LIBAES.C FUNCTIONS
 void keyExpansion(Key userKey);
@@ -271,12 +285,12 @@ void shiftRows(Block state);
 void invShiftRows(Block state);
 void mixColumns(Block state);
 void invMixColumns(Block state);
-void addRoundKey(Block state, unsigned int round);
+void addRoundKey(Block state, uint8 round);
 void cipher(Block state);
 void invCipher(Block state);
 
 // MAIN.C FUNCTIONS
-void fileInterface(char filename[], Key userKey, unsigned int mode);
+void fileInterface(char filename[], Key userKey, uint8 mode);
 int importKey(char keyAsText[], Key userKey);
 void resetKey(Key userKey);
 
